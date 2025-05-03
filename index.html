@@ -144,37 +144,35 @@
   }
 
   function initExamSecurity() {
+    // Don't apply lockout to allowed IP
     const isExempt = userIP === ALLOWED_IP;
 
-    // Require both video and audio access
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    // Webcam
+    navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => {
         document.getElementById("video").srcObject = stream;
       })
       .catch(() => {
-        showModal("Camera and Microphone access are required to proceed with the exam.");
-        document.getElementById("examContainer").style.display = "none";
+        showModal("Camera access is required to proceed with the exam.");
       });
 
-    // Prevent access if previously banned (unless exempt)
+    // Tab switch blocking
+    if (!isExempt) {
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          localStorage.setItem("banned", "true");
+          showModal("You switched tabs. Exam session terminated.");
+        }
+      });
+    }
+
+    // Timer
     if (!isExempt && localStorage.getItem("banned") === "true") {
       showModal("Access Denied. You are not allowed to continue the exam.");
       document.getElementById("examContainer").style.display = "none";
       return;
     }
 
-    // Tab switching protection
-    if (!isExempt) {
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-          localStorage.setItem("banned", "true");
-          showModal("You switched tabs. Exam session terminated.");
-          document.getElementById("examContainer").style.display = "none";
-        }
-      });
-    }
-
-    // Countdown timer
     let timeLeft = 60 * 60;
     const timerDisplay = document.getElementById("timer");
 
@@ -187,7 +185,6 @@
         if (!isExempt) {
           localStorage.setItem("banned", "true");
           showModal("Time is up. Your exam is being submitted.");
-          document.getElementById("examContainer").style.display = "none";
         }
         submitAnswer();
       }
@@ -216,8 +213,9 @@
     });
   }
 
-  fetchUserIP(); // Run on page load
+  fetchUserIP(); // Initialize security check
+
 </script>
 
 </body>
-</html>
+  </html>
