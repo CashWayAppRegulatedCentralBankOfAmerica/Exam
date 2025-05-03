@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Online Exam</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 30px; padding: 10px; }
+    video { width: 300px; border: 2px solid #000; margin-top: 20px; }
+    #timer { font-size: 24px; font-weight: bold; color: red; margin-bottom: 20px; }
+    .hidden { display: none; }
+    input[type="text"] { padding: 5px; width: 60%; margin-bottom: 15px; }
+  </style>
+</head>
+<body>
+
+<h2>Secure Online Exam</h2>
+<div id="timer">Loading Timer...</div>
+
+<div id="examArea">
+  <p><strong>Student Name:</strong></p>
+  <input type="text" id="name" placeholder="Enter your name" required><br>
+
+  <p><strong>Question 1: What is 5 + 7?</strong></p>
+  <input type="text" id="q1" placeholder="Answer"><br>
+
+  <p><strong>Question 2: Who is the Governor of Nairobi?</strong></p>
+  <input type="text" id="q2" placeholder="Answer"><br>
+
+  <p><strong>Question 3: What is the capital city of Kenya?</strong></p>
+  <input type="text" id="q3" placeholder="Answer"><br><br>
+
+  <button onclick="submitAnswer()">Submit Now</button>
+</div>
+
+<div id="blocked" class="hidden">
+  <h3>Your exam has been terminated.</h3>
+  <p>You cannot re-enter after switching tabs or when time is up.</p>
+</div>
+
+<video id="video" autoplay muted></video>
+
+<script>
+  const formURL = "YOUR_WEB_APP_URL_HERE"; // << REPLACE THIS with your actual Apps Script Web App URL
+
+  if (localStorage.getItem("banned") === "true") {
+    document.getElementById("examArea").style.display = "none";
+    document.getElementById("blocked").classList.remove("hidden");
+  }
+
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+      document.getElementById("video").srcObject = stream;
+    })
+    .catch(() => {
+      alert("Camera access is required for the exam.");
+    });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      banUser("You left the exam tab. Session terminated.");
+    }
+  });
+
+  let timeLeft = 60 * 60;
+  const timerDisplay = document.getElementById("timer");
+
+  const timerInterval = setInterval(() => {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    timerDisplay.textContent = `Time Left: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      alert("Time is up. Submitting your answers...");
+      localStorage.setItem("banned", "true");
+      submitAnswer();
+    }
+    timeLeft--;
+  }, 1000);
+
+  function banUser(message) {
+    localStorage.setItem("banned", "true");
+    alert(message);
+    location.reload();
+  }
+
+  function submitAnswer() {
+    const name = document.getElementById("name").value.trim();
+    const q1 = document.getElementById("q1").value.trim();
+    const q2 = document.getElementById("q2").value.trim();
+    const q3 = document.getElementById("q3").value.trim();
+
+    if (!name || !q1 || !q2 || !q3) {
+      alert("Please answer all questions before submitting.");
+      return;
+    }
+
+    fetch(formURL, {
+      method: "POST",
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `name=${encodeURIComponent(name)}&q1=${encodeURIComponent(q1)}&q2=${encodeURIComponent(q2)}&q3=${encodeURIComponent(q3)}`
+    }).then(() => {
+      alert("Your answers have been submitted.");
+      localStorage.setItem("banned", "true");
+      location.reload();
+    }).catch(() => {
+      alert("Submission failed. Please check your connection.");
+    });
+  }
+</script>
+
+</body>
+</html>
